@@ -35,25 +35,34 @@ import edu.ucla.cs.cs144.SearchResult;
 
 public class AuctionSearch implements IAuctionSearch {
 
-	/* 
-         * You will probably have to use JDBC to access MySQL data
-         * Lucene IndexSearcher class to lookup Lucene index.
-         * Read the corresponding tutorial to learn about how to use these.
-         *
-	 * You may create helper functions or classes to simplify writing these
-	 * methods. Make sure that your helper functions are not public,
-         * so that they are not exposed to outside of this class.
-         *
-         * Any new classes that you create should be part of
-         * edu.ucla.cs.cs144 package and their source files should be
-         * placed at src/edu/ucla/cs/cs144.
-         *
-         */
-	
-	public SearchResult[] basicSearch(String query, int numResultsToSkip, 
+    private SearchEngine searchEngine = null;
+
+    public SearchResult[] basicSearch(String queryString, int numResultsToSkip,
 			int numResultsToReturn) {
-		// TODO: Your code here!
-		return new SearchResult[0];
+        SearchResult[] searchResults = null;
+
+		try {
+            searchEngine = new SearchEngine("/var/lib/lucene/index", "searchField");
+            TopDocs topDocs = searchEngine.performSearch(queryString,
+                    numResultsToSkip + numResultsToReturn);
+            ScoreDoc[] hits = topDocs.scoreDocs;
+            int length = Math.min(hits.length, numResultsToSkip + numResultsToReturn);
+            searchResults = new SearchResult[length - numResultsToSkip];
+
+            for (int i = numResultsToSkip; i < length; i++) {
+                Document doc = searchEngine.getDocument(hits[i].doc);
+                String itemID = doc.get("ItemID");
+                String name = doc.get("Name");
+
+                searchResults[i - numResultsToSkip] = new SearchResult(itemID, name);
+            }
+        } catch(IOException ex) {
+            System.out.println(ex);
+        } catch(ParseException ex) {
+            System.out.println(ex);
+        }
+
+        return searchResults;
 	}
 
 	public SearchResult[] spatialSearch(String query, SearchRegion region,
