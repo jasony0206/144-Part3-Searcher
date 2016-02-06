@@ -3,10 +3,7 @@ package edu.ucla.cs.cs144;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.File;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.text.SimpleDateFormat;
 
 import java.sql.Connection;
@@ -37,13 +34,13 @@ public class AuctionSearch implements IAuctionSearch {
 
     private SearchEngine searchEngine = null;
 
-    public SearchResult[] basicSearch(String queryString, int numResultsToSkip,
+    public SearchResult[] basicSearch(String query, int numResultsToSkip,
 			int numResultsToReturn) {
         SearchResult[] searchResults = null;
 
 		try {
             searchEngine = new SearchEngine("/var/lib/lucene/index", "searchField");
-            TopDocs topDocs = searchEngine.performSearch(queryString,
+            TopDocs topDocs = searchEngine.performSearch(query,
                     numResultsToSkip + numResultsToReturn);
             ScoreDoc[] hits = topDocs.scoreDocs;
             int length = Math.min(hits.length, numResultsToSkip + numResultsToReturn);
@@ -67,8 +64,43 @@ public class AuctionSearch implements IAuctionSearch {
 
 	public SearchResult[] spatialSearch(String query, SearchRegion region,
 			int numResultsToSkip, int numResultsToReturn) {
-		// TODO: Your code here!
-		return new SearchResult[0];
+        Connection conn = null;
+        List<SearchResult> intersectResults = new ArrayList<SearchResult>();
+        ResultSet spatialQueryResultSet = null;
+        Set<String> spatialQuerySet = new HashSet<String>();
+
+        // perform keyword based search
+        SearchResult[] keywordQueryResult = basicSearch(query, 0, Integer.MAX_VALUE);
+
+        // get DB connection, perform query
+        try {
+            conn = DbManager.getConnection(true);
+            Statement stmt = conn.createStatement();
+            String spatialQueryString = String.format("select ItemID from ItemLocationPoint " +
+                    "where x(LocationPoint) between %s and %s and y(LocationPoint) between %s and %s",
+                    region.getLx(), region.getRx(), region.getLy(), region.getRy());
+            spatialQueryResultSet = stmt.executeQuery(spatialQueryString);
+
+            while (spatialQueryResultSet.next()) {
+                String itemID = spatialQueryResultSet.getString("ItemID");
+                spatialQuerySet.add(itemID);
+            }
+
+            // close the database connection
+            conn.close();
+        } catch (SQLException ex) {
+            System.out.println(ex);
+        }
+
+        for (SearchResult keywordEntry : keywordQueryResult) {
+            if (spatialQuerySet.contains(keywordEntry.getItemId())) {
+                intersectResults.add(keywordEntry);
+            }
+        }
+
+        int toIndex = Math.min(numResultsToSkip + numResultsToReturn, intersectResults.size());
+        intersectResults = intersectResults.subList(numResultsToSkip, toIndex);
+        return intersectResults.toArray(new SearchResult[intersectResults.size()]);
 	}
 
 	public String getXMLDataForItemId(String itemId) {
