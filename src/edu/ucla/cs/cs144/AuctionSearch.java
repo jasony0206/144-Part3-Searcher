@@ -133,15 +133,15 @@ public class AuctionSearch implements IAuctionSearch {
             categories = formatCategories(categoryList);
             bids = formatBids(bidsList);
             locationAttributes = formatLocationAttributes(latLong);
-            buyPrice = buyPrice == null? "" : "<Buy_Price>" + buyPrice + "</Buy_Price>\n";
+            buyPrice = buyPrice.equals("0.00")? "" : "<Buy_Price>$" + buyPrice + "</Buy_Price>\n";
 
             xmlData = String.format(
                             "<Item ItemID=\"%s\">\n" +
                             "<Name>%s</Name>\n" +
                             "%s" +
-                            "<Currently>%s</Currently>\n" +
+                            "<Currently>$%s</Currently>\n" +
                             "%s" +
-                            "<First_Bid>%s</First_Bid>\n" +
+                            "<First_Bid>$%s</First_Bid>\n" +
                             "<Number_of_Bids>%s</Number_of_Bids>\n" +
                             "<Bids>\n%s</Bids>\n" +
                             "<Location%s>%s</Location>\n" +
@@ -188,7 +188,7 @@ public class AuctionSearch implements IAuctionSearch {
                             "%s" +
                             "</Bidder>\n" +
                             "<Time>%s</Time>\n" +
-                            "<Amount>%s</Amount>\n" +
+                            "<Amount>$%s</Amount>\n" +
                             "</Bid>\n",
                         map.get("BidderRating"), map.get("UserID"), locationCountry,
                         map.get("Time"), map.get("Amount")
@@ -218,19 +218,19 @@ public class AuctionSearch implements IAuctionSearch {
             return null;
         }
 
-        name = resultSet.getString("Name");
-        location = resultSet.getString("Location");
-        country = resultSet.getString("Country");
-        userID = resultSet.getString("UserID");
-        description = resultSet.getString("Description");
+        name = escapeChars(resultSet.getString("Name"));
+        location = escapeChars(resultSet.getString("Location"));
+        country = escapeChars(resultSet.getString("Country"));
+        userID = escapeChars(resultSet.getString("UserID"));
+        description = escapeChars(resultSet.getString("Description"));
 
         SimpleDateFormat outputFormat = new SimpleDateFormat("MMM-dd-yy HH:mm:ss");
         started = outputFormat.format(resultSet.getTimestamp("Started"));
         ends = outputFormat.format(resultSet.getTimestamp("Ends"));
 
-        currently = Float.toString(resultSet.getFloat("Currently"));
-        buyPrice = Float.toString(resultSet.getFloat("Buy_Price"));
-        firstBid = Float.toString(resultSet.getFloat("First_Bid"));
+        currently = String.format("%.2f", resultSet.getFloat("Currently"));
+        buyPrice = String.format("%.2f", resultSet.getFloat("Buy_Price"));
+        firstBid = String.format("%.2f", resultSet.getFloat("First_Bid"));
         numOfBids = Integer.toString(resultSet.getInt("Number_of_Bids"));
 
         Map<String, String> map = new HashMap<String, String>();
@@ -257,7 +257,7 @@ public class AuctionSearch implements IAuctionSearch {
         ArrayList<String> list = new ArrayList<String>();
 
         while (resultSet.next()) {
-            list.add(resultSet.getString("Category"));
+            list.add(escapeChars(resultSet.getString("Category")));
         }
 
         return list;
@@ -299,13 +299,13 @@ public class AuctionSearch implements IAuctionSearch {
 
         while (resultSet.next()) {
             Map<String, String> map = new HashMap<String, String>();
-            String userId = resultSet.getString("UserID");
+            String userId = escapeChars(resultSet.getString("UserID"));
             map.put("UserID", userId);
 
             SimpleDateFormat outputFormat = new SimpleDateFormat("MMM-dd-yy HH:mm:ss");
             String time = outputFormat.format(resultSet.getTimestamp("Time"));
             map.put("Time", time);
-            map.put("Amount", Float.toString(resultSet.getFloat("Amount")));
+            map.put("Amount", String.format("%.2f", resultSet.getFloat("Amount")));
             //map.putAll(getBiddersData(userId));
             bidsList.add(map);
         }
@@ -327,11 +327,21 @@ public class AuctionSearch implements IAuctionSearch {
 
         while (resultSet.next()) {
             bidderMap.put("BidderRating", Integer.toString(resultSet.getInt("BidderRating")));
-            bidderMap.put("Location", resultSet.getString("Location"));
-            bidderMap.put("Country", resultSet.getString("Country"));
+            bidderMap.put("Location", escapeChars(resultSet.getString("Location")));
+            bidderMap.put("Country", escapeChars(resultSet.getString("Country")));
         }
 
         return bidderMap;
+    }
+
+    private String escapeChars(String s) {
+        s = s.replace("&", "&amp;");
+//            .replace("\"", "&quot;")
+//            .replace("'", "&apos;")
+//            .replace("<", "&lt;")
+//            .replace(">", "&gt;");
+
+        return s;
     }
 	
 	public String echo(String message) {
