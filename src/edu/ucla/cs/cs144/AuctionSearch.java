@@ -133,22 +133,22 @@ public class AuctionSearch implements IAuctionSearch {
             categories = formatCategories(categoryList);
             bids = formatBids(bidsList);
             locationAttributes = formatLocationAttributes(latLong);
-            buyPrice = buyPrice == null? "" : "<Buy_Price>" + buyPrice + "</Buy_Price>\n\t";
+            buyPrice = buyPrice == null? "" : "<Buy_Price>" + buyPrice + "</Buy_Price>\n";
 
             xmlData = String.format(
-                            "<Item ItemID=\"%s\">\n\t" +
-                            "<Name>%s</Name>\n\t" +
+                            "<Item ItemID=\"%s\">\n" +
+                            "<Name>%s</Name>\n" +
                             "%s" +
-                            "<Currently>%s</Currently>\n\t" +
+                            "<Currently>%s</Currently>\n" +
                             "%s" +
-                            "<First_Bid>%s</First_Bid>\n\t" +
-                            "<Number_of_Bids>%s</Number_of_Bids>\n\t" +
-                            "<Bids>\n\t%s</Bids>\n\t" +
-                            "<Location%s>%s</Location>\n\t" +
-                            "<Country>%s</Country>\n\t" +
-                            "<Started>%s</Started>\n\t" +
-                            "<Ends>%s</Ends>\n\t" +
-                            "<Seller Rating=\"%s\" UserID=\"%s\" />\n\t" +
+                            "<First_Bid>%s</First_Bid>\n" +
+                            "<Number_of_Bids>%s</Number_of_Bids>\n" +
+                            "<Bids>\n%s</Bids>\n" +
+                            "<Location%s>%s</Location>\n" +
+                            "<Country>%s</Country>\n" +
+                            "<Started>%s</Started>\n" +
+                            "<Ends>%s</Ends>\n" +
+                            "<Seller Rating=\"%s\" UserID=\"%s\" />\n" +
                             "<Description>%s</Description>\n" +
                             "</Item>",
                     itemId, name, categories, currently, buyPrice, firstBid,
@@ -166,7 +166,7 @@ public class AuctionSearch implements IAuctionSearch {
     private String formatCategories(ArrayList<String> categoryList) {
         String s = "";
         for (String category : categoryList) {
-            s += String.format("<Category>%s</Category>\n\t", category);
+            s += String.format("<Category>%s</Category>\n", category);
         }
         return s;
     }
@@ -178,18 +178,18 @@ public class AuctionSearch implements IAuctionSearch {
             String location = map.get("Location");
             String country = map.get("Country");
             if (location != null) {
-                locationCountry += String.format("<Location>%s</Location>\n\t", location);
+                locationCountry += String.format("<Location>%s</Location>\n", location);
             }
             if (country != null) {
-                locationCountry += String.format("<Country>%s</Country>\n\t", country);
+                locationCountry += String.format("<Country>%s</Country>\n", country);
             }
             s += String.format(
-                            "<Bid>\n\t<Bidder Rating=\"%s\" UserID=\"%s\">" +
+                            "<Bid>\n<Bidder Rating=\"%s\" UserID=\"%s\">" +
                             "%s" +
-                            "</Bidder>\n\t" +
-                            "<Time>%s</Time>\n\t" +
+                            "</Bidder>\n" +
+                            "<Time>%s</Time>\n" +
                             "<Amount>%s</Amount>\n" +
-                            "</Bid>",
+                            "</Bid>\n",
                         map.get("BidderRating"), map.get("UserID"), locationCountry,
                         map.get("Time"), map.get("Amount")
             );
@@ -306,8 +306,13 @@ public class AuctionSearch implements IAuctionSearch {
             String time = outputFormat.format(resultSet.getTimestamp("Time"));
             map.put("Time", time);
             map.put("Amount", Float.toString(resultSet.getFloat("Amount")));
-            //map.putAll(getBiddersData(userId, stmt));
+            //map.putAll(getBiddersData(userId));
             bidsList.add(map);
+        }
+
+        for (Map<String, String> bid : bidsList) {
+            String userId = bid.get("UserID");
+            bid.putAll(getBiddersData(userId, stmt));
         }
 
         return bidsList;
@@ -321,7 +326,7 @@ public class AuctionSearch implements IAuctionSearch {
         Map<String, String> bidderMap = new HashMap<String, String>();
 
         while (resultSet.next()) {
-            bidderMap.put("BidderRating", Integer.toString(resultSet.getInt("Bidder Rating")));
+            bidderMap.put("BidderRating", Integer.toString(resultSet.getInt("BidderRating")));
             bidderMap.put("Location", resultSet.getString("Location"));
             bidderMap.put("Country", resultSet.getString("Country"));
         }
