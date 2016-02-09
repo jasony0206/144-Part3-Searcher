@@ -184,7 +184,7 @@ public class AuctionSearch implements IAuctionSearch {
                 locationCountry += String.format("<Country>%s</Country>\n", country);
             }
             s += String.format(
-                            "<Bid>\n<Bidder Rating=\"%s\" UserID=\"%s\">" +
+                            "<Bid>\n<Bidder Rating=\"%s\" UserID=\"%s\">\n" +
                             "%s" +
                             "</Bidder>\n" +
                             "<Time>%s</Time>\n" +
