@@ -306,7 +306,6 @@ public class AuctionSearch implements IAuctionSearch {
             String time = outputFormat.format(resultSet.getTimestamp("Time"));
             map.put("Time", time);
             map.put("Amount", String.format("%.2f", resultSet.getFloat("Amount")));
-            //map.putAll(getBiddersData(userId));
             bidsList.add(map);
         }
 
