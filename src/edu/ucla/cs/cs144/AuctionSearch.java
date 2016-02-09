@@ -130,23 +130,26 @@ public class AuctionSearch implements IAuctionSearch {
 
             // format into XML
             String categories, bids, locationAttributes;
-            categories = bids = locationAttributes = "";
             categories = formatCategories(categoryList);
+            bids = formatBids(bidsList);
+            locationAttributes = formatLocationAttributes(latLong);
+            buyPrice = buyPrice == null? "" : "<Buy_Price>" + buyPrice + "</Buy_Price>\n\t";
+
             xmlData = String.format(
-                    "<Item ItemID=\"%s\">\n\t" +
+                            "<Item ItemID=\"%s\">\n\t" +
                             "<Name>%s</Name>\n\t" +
                             "%s" +
                             "<Currently>%s</Currently>\n\t" +
-                            "<Buy_Price>%s</Buy_Price>\n\t" +
+                            "%s" +
                             "<First_Bid>%s</First_Bid>\n\t" +
                             "<Number_of_Bids>%s</Number_of_Bids>\n\t" +
-                            "%s" +
+                            "<Bids>\n\t%s</Bids>\n\t" +
                             "<Location%s>%s</Location>\n\t" +
                             "<Country>%s</Country>\n\t" +
                             "<Started>%s</Started>\n\t" +
                             "<Ends>%s</Ends>\n\t" +
                             "<Seller Rating=\"%s\" UserID=\"%s\" />\n\t" +
-                            "<Description>%s</Description>\n\t" +
+                            "<Description>%s</Description>\n" +
                             "</Item>",
                     itemId, name, categories, currently, buyPrice, firstBid,
                     numOfBids, bids, locationAttributes, location, country,
@@ -168,9 +171,47 @@ public class AuctionSearch implements IAuctionSearch {
         return s;
     }
 
+    private String formatBids(ArrayList<Map<String, String>> bidsList) {
+        String s = "";
+        for (Map<String, String> map : bidsList) {
+            String locationCountry = "";
+            String location = map.get("Location");
+            String country = map.get("Country");
+            if (location != null) {
+                locationCountry += String.format("<Location>%s</Location>\n\t", location);
+            }
+            if (country != null) {
+                locationCountry += String.format("<Country>%s</Country>\n\t", country);
+            }
+            s += String.format(
+                            "<Bid>\n\t<Bidder Rating=\"%s\" UserID=\"%s\">" +
+                            "%s" +
+                            "</Bidder>\n\t" +
+                            "<Time>%s</Time>\n\t" +
+                            "<Amount>%s</Amount>\n" +
+                            "</Bid>",
+                        map.get("BidderRating"), map.get("UserID"), locationCountry,
+                        map.get("Time"), map.get("Amount")
+            );
+        }
+        return s;
+    }
+
+    private String formatLocationAttributes(ArrayList<String> latLong) {
+        String s = "";
+        String latitude = latLong.get(0);
+        String longitude = latLong.get(1);
+        if (latitude != null && longitude != null) {
+            s = String.format(" Latitude=\"%s\" Longitude=\"%s\"",
+                    latitude, longitude);
+        }
+        return s;
+    }
+
     private Map<String, String> getItemsData(String itemId, Statement stmt) throws SQLException {
         String name, location, country, userID, description, started, ends, currently, buyPrice, firstBid, numOfBids;
         String query = String.format("select * from Items where ItemID = %s", itemId);
+        System.out.println(query);
         ResultSet resultSet = stmt.executeQuery(query);
 
         if (!resultSet.next()) {
@@ -210,6 +251,8 @@ public class AuctionSearch implements IAuctionSearch {
 
     private ArrayList<String> getCategoriesData(String itemId, Statement stmt) throws SQLException {
         String query = String.format("select Category from ItemCategory where ItemID = %s", itemId);
+        System.out.println(query);
+
         ResultSet resultSet = stmt.executeQuery(query);
         ArrayList<String> list = new ArrayList<String>();
 
@@ -221,8 +264,10 @@ public class AuctionSearch implements IAuctionSearch {
     }
 
     private ArrayList<String> getLocationData(String location, String country, Statement stmt) throws SQLException {
-        String query = String.format("select Latitude, Longitude from ItemLocationInfo " +
-                "where Location = %s and Country = %s", location, country);
+        String query = String.format("select Latitude, Longitude from LocationInfo " +
+                "where Location = \"%s\" and Country = \"%s\"", location, country);
+        System.out.println(query);
+
         ResultSet resultSet = stmt.executeQuery(query);
         ArrayList<String> list = new ArrayList<String>();
 
@@ -235,13 +280,20 @@ public class AuctionSearch implements IAuctionSearch {
     }
 
     private String getSellersData(String userId, Statement stmt) throws SQLException {
-        String query = String.format("select Seller_Rating from Sellers where UserID = %s", userId);
+        String query = String.format("select SellerRating from Sellers where UserID = \"%s\"", userId);
+        System.out.println(query);
+        Integer rating = 0;
         ResultSet resultSet = stmt.executeQuery(query);
-        return Integer.toString(resultSet.getInt("Seller_Rating"));
+        while (resultSet.next()) {
+            rating = resultSet.getInt("SellerRating");
+        }
+        return Integer.toString(rating);
     }
 
     private ArrayList<Map<String, String>> getBidsData(String itemId, Statement stmt) throws SQLException {
         String query = String.format("select * from Bids where ItemID = %s", itemId);
+        System.out.println(query);
+
         ResultSet resultSet = stmt.executeQuery(query);
         ArrayList<Map<String, String>> bidsList = new ArrayList<Map<String, String>>();
 
@@ -254,7 +306,7 @@ public class AuctionSearch implements IAuctionSearch {
             String time = outputFormat.format(resultSet.getTimestamp("Time"));
             map.put("Time", time);
             map.put("Amount", Float.toString(resultSet.getFloat("Amount")));
-            map.putAll(getBiddersData(userId, stmt));
+            //map.putAll(getBiddersData(userId, stmt));
             bidsList.add(map);
         }
 
@@ -262,12 +314,14 @@ public class AuctionSearch implements IAuctionSearch {
     }
 
     private Map<String, String> getBiddersData(String userId, Statement stmt) throws SQLException {
-        String query = String.format("select * from Bidders where UserID = %s", userId);
+        String query = String.format("select * from Bidders where UserID = \"%s\"", userId);
+        System.out.println(query);
+
         ResultSet resultSet = stmt.executeQuery(query);
         Map<String, String> bidderMap = new HashMap<String, String>();
 
         while (resultSet.next()) {
-            bidderMap.put("BidderRating", Integer.toString(resultSet.getInt("Bidder_Rating")));
+            bidderMap.put("BidderRating", Integer.toString(resultSet.getInt("Bidder Rating")));
             bidderMap.put("Location", resultSet.getString("Location"));
             bidderMap.put("Country", resultSet.getString("Country"));
         }
